@@ -1,28 +1,53 @@
-# export FLASK_APP=index.py
-# export FLASK_ENV=development
-# flask run
-# curl http://127.0.0.1:5000/
-from crypt import methods
 from flask import Flask, jsonify, request
+
+from cashman.model.expense import Expense, ExpenseSchema
+from cashman.model.income import Income, IncomeSchema
+from cashman.model.transaction_type import TransactionType
+
 app = Flask(__name__)
 
-@app.route("/")
-def hello_world():
-  return "Hello, T he World!"
-
-incomes = [
-  {'description':'salary','amount':5000}
+transactions = [
+  Income('Salary', 5000),
+  Income('Dividends', 200),
+  Expense('pizza', 50),
+  Expense('Rock Concert', 100)
 ]
 
-@app.route("/incomes")
+
+@app.route('/incomes')
 def get_incomes():
-  return jsonify(incomes)
+  schema = IncomeSchema(many=True)
+  incomes = schema.dump(
+    filter(lambda t: t.type == TransactionType.INCOME, transactions)
+  )
+  return jsonify(incomes.data)
 
-@app.route("/incomes", methods=["POST"])
+
+@app.route('/incomes', methods=['POST'])
 def add_income():
-  incomes.append(request.get_json())
-  return '',204
+  income = IncomeSchema().load(request.get_json())
+  transactions.append(income.data)
+  return "", 204
 
+
+@app.route('/expenses')
+def get_expenses():
+  schema = ExpenseSchema(many=True)
+  expenses = schema.dump(
+      filter(lambda t: t.type == TransactionType.EXPENSE, transactions)
+  )
+  return jsonify(expenses.data)
+
+
+@app.route('/expenses', methods=['POST'])
+def add_expense():
+  expense = ExpenseSchema().load(request.get_json())
+  transactions.append(expense.data)
+  return "", 204
+
+
+if __name__ == "__main__":
+    app.run()
 
 """
  add new income
